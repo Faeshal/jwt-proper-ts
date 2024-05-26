@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ErrorResponse } from "./errorHandler";
-import { verifyToken } from "../utils/paseto";
+import { verifyToken } from "../utils/jwt";
 import log4js from "log4js";
 const log = log4js.getLogger("middleware:auth");
 log.level = "info";
@@ -20,10 +20,11 @@ export const protect = async (req: Request, res: Response, next: any) => {
 
     // * verify paseto
     const decoded = await verifyToken(token);
-    if (decoded.success == false) {
-      return next(new ErrorResponse("unauthorized or expired token", 401));
-    }
-    req.user = decoded.data;
+    // if (decoded.success == false) {
+    //   return next(new ErrorResponse("unauthorized or expired token", 401));
+    // }
+    log.warn("DECODED:⭐", decoded);
+    req.user = decoded;
     log.info("req.user", req.user);
     next();
   } catch (err) {

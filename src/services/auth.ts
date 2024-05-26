@@ -1,7 +1,7 @@
 import "dotenv/config";
 import * as userRepo from "../repositories/user";
 import { ErrorResponse } from "../middleware/errorHandler";
-import { generateToken } from "../utils/paseto";
+import { generateToken } from "../utils/jwt";
 import { LoginRequest, RegisterRequest } from "../interfaces/user";
 import bcrypt from "bcrypt";
 import log4js from "log4js";
@@ -66,11 +66,12 @@ export const login = async (body: LoginRequest) => {
     role: user.role,
   };
   const accessToken = await generateToken(tokenPayload);
+  log.warn("🍥 access token:", accessToken);
 
   // * formating data
   const fmtData = {
     isLoggedIn: true,
-    accessToken: accessToken.data,
+    accessToken: accessToken,
   };
   return fmtData;
 };
