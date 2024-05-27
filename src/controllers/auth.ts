@@ -55,3 +55,24 @@ export const login = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true, message: "ok", data: result });
 });
+
+// * @route POST /api/v1/auth/refresh
+// @desc    refresh access token
+// @access  public
+export const refresh = asyncHandler(async (req, res, next) => {
+  const { refreshToken } = req.body;
+  log.info("body:", req.body);
+
+  // *Express Validator
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new ErrorResponse(errors.array({ onlyFirstError: true })[0].msg, 400)
+    );
+  }
+
+  // * call service
+  const result = await authService.refresh(refreshToken);
+
+  res.status(200).json({ success: true, message: "ok", data: result });
+});

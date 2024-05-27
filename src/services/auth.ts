@@ -1,8 +1,9 @@
 import "dotenv/config";
 import * as userRepo from "../repositories/user";
 import { ErrorResponse } from "../middleware/errorHandler";
-import { generateToken } from "../utils/jwt";
+import { generateToken, verifyToken } from "../utils/jwt";
 import { LoginRequest, RegisterRequest } from "../interfaces/user";
+import keyv from "../utils/keyv";
 import bcrypt from "bcrypt";
 import log4js from "log4js";
 const log = log4js.getLogger("service:auth");
@@ -59,19 +60,79 @@ export const login = async (body: LoginRequest) => {
     throw new ErrorResponse("email / password doesn't match or exists", 400);
   }
 
-  // * generate paseto token
+  // * generate jwt token
   const tokenPayload = {
     id: user.id,
-    timestamp: Date.now(),
     role: user.role,
+    timestamp: Date.now(),
   };
-  const accessToken = await generateToken(tokenPayload);
+  const accessToken = await generateToken("accessToken", tokenPayload);
+  const refreshToken: any = await generateToken("refreshToken", tokenPayload);
   log.warn("🍥 access token:", accessToken);
+  log.info("🍥 refresh token:", accessToken);
+
+  // cache refreshToken
+  const setCache = await keyv.set(refreshToken, user.id, 7 * 24 * 60 * 60);
+  log.info("SET CACHE:", setCache);
 
   // * formating data
   const fmtData = {
     isLoggedIn: true,
-    accessToken: accessToken,
+    accessToken,
+    refreshToken,
   };
   return fmtData;
 };
+
+export const refresh = async (refreshToken: string) => {
+  log.info("refreshToken:", refreshToken);
+
+  // check is refresh token exist
+  const inCache = await keyv.get(refreshToken);
+  if (inCache == undefined) {
+    log.warn("refresh token not exist!");
+    throw new ErrorResponse("invalid refreshToken", 400);
+  }
+  log.info("⭐inCache:", inCache);
+
+  // verify refresh token
+  const decoded: any = await verifyToken(refreshToken);
+  const { id, role } = decoded;
+
+  // generate new token
+  const tokenPayload = {
+    id,
+    role,
+    timestamp: Date.now(),
+  };
+  const accToken: any = await generateToken("accessToken", tokenPayload);
+  const refToken: any = await generateToken("refreshToken", tokenPayload);
+
+  // store refresh token in cache
+  const setCache = await keyv.set(refToken, id);
+  log.info("SET CACHE:", setCache);
+
+  // delete old refresh token
+  const deleteCache = await keyv.delete(refreshToken);
+  log.info("delete cache:", deleteCache);
+
+  // * formating data
+  const fmtData = {
+    isLoggedIn: true,
+    accessToken: accToken,
+    refreshToken: refToken,
+  };
+  return fmtData;
+};
+
+// Logout endpoint
+app.post("/api/logout", authenticateToken, async (req, res) => {
+  const userId = req.user.id; // Assuming the user ID is stored in the token
+
+  // Delete all refresh tokens related to this user
+  // await deleteAllUserRefreshTokens(userId);
+
+  // Optionally, you can blacklist the access token until it expires
+
+  res.json({ message: "Logged out successfully" });
+});

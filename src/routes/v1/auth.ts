@@ -27,4 +27,10 @@ router.post(
   authController.register
 );
 
+router.post(
+  "/auth/refresh",
+  [body("refreshToken", "refreshToken is required").not().isEmpty().trim()],
+  authController.refresh
+);
+
 export default router;

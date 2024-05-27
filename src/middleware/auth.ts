@@ -18,14 +18,11 @@ export const protect = async (req: Request, res: Response, next: any) => {
       return next(new ErrorResponse("unauthorized, token is empty", 401));
     }
 
-    // * verify paseto
-    const decoded = await verifyToken(token);
-    // if (decoded.success == false) {
-    //   return next(new ErrorResponse("unauthorized or expired token", 401));
-    // }
-    log.warn("DECODED:⭐", decoded);
+    // * verify token
+    const decoded: any = await verifyToken(token);
+    log.info("DECODED:", decoded);
+
     req.user = decoded;
-    log.info("req.user", req.user);
     next();
   } catch (err) {
     log.error(err);
