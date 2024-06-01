@@ -6,6 +6,7 @@ import { LoginRequest, RegisterRequest } from "../interfaces/user";
 import redis from "../utils/redis";
 import bcrypt from "bcrypt";
 import log4js from "log4js";
+import { axiosReq } from "../utils/axios";
 const log = log4js.getLogger("service:auth");
 
 export const register = async (body: RegisterRequest) => {
@@ -72,8 +73,12 @@ export const login = async (body: LoginRequest) => {
   log.info("🍥 refresh token:", accessToken);
 
   // cache refreshToken
-  const setCache = await redis.set(refreshToken, user.id, "EX", 691200); // 8 days
-  log.info("SET CACHE:", setCache);
+  // const setCache = await redis.set(refreshToken, user.id, "EX", 691200); // 8 days
+  // log.info("SET CACHE:", setCache);
+
+  // request
+  const result = await axiosReq("https://reqres.in/ai/uses", "GET");
+  log.warn("HASIL", result);
 
   // * formating data
   const fmtData = {
