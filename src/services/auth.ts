@@ -73,12 +73,10 @@ export const login = async (body: LoginRequest) => {
   log.info("🍥 refresh token:", accessToken);
 
   // cache refreshToken
-  // const setCache = await redis.set(refreshToken, user.id, "EX", 691200); // 8 days
-  // log.info("SET CACHE:", setCache);
+  const setCache = await redis.set(refreshToken, user.id, "EX", 691200); // 8 days
+  log.info("SET CACHE:", setCache);
 
-  // request
-  const result = await axiosReq("https://reqres.in/ai/uses", "GET");
-  log.warn("HASIL", result);
+  await axiosReq("https://reqres.in/api/users", "get");
 
   // * formating data
   const fmtData = {
