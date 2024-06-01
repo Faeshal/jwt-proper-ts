@@ -3,7 +3,7 @@ import * as userRepo from "../repositories/user";
 import { ErrorResponse } from "../middleware/errorHandler";
 import { generateToken, verifyToken } from "../utils/jwt";
 import { LoginRequest, RegisterRequest } from "../interfaces/user";
-import keyv from "../utils/keyv";
+import redis from "../utils/redis";
 import bcrypt from "bcrypt";
 import log4js from "log4js";
 const log = log4js.getLogger("service:auth");
@@ -72,7 +72,7 @@ export const login = async (body: LoginRequest) => {
   log.info("🍥 refresh token:", accessToken);
 
   // cache refreshToken
-  const setCache = await keyv.set(refreshToken, user.id, 7 * 24 * 60 * 60);
+  const setCache = await redis.set(refreshToken, user.id, "EX", 691200); // 8 days
   log.info("SET CACHE:", setCache);
 
   // * formating data
@@ -88,12 +88,12 @@ export const refresh = async (refreshToken: string) => {
   log.info("refreshToken:", refreshToken);
 
   // check is refresh token exist
-  const inCache = await keyv.get(refreshToken);
+  const inCache = await redis.get(refreshToken);
+  log.info("inCache ⭐", inCache);
   if (inCache == undefined) {
     log.warn("refresh token not exist!");
     throw new ErrorResponse("invalid refreshToken", 400);
   }
-  log.info("⭐inCache:", inCache);
 
   // verify refresh token
   const decoded: any = await verifyToken(refreshToken);
@@ -109,11 +109,11 @@ export const refresh = async (refreshToken: string) => {
   const refToken: any = await generateToken("refreshToken", tokenPayload);
 
   // store refresh token in cache
-  const setCache = await keyv.set(refToken, id);
+  const setCache = await redis.set(refToken, id, "EX", 691200);
   log.info("SET CACHE:", setCache);
 
   // delete old refresh token
-  const deleteCache = await keyv.delete(refreshToken);
+  const deleteCache = await redis.del(refreshToken);
   log.info("delete cache:", deleteCache);
 
   // * formating data
@@ -126,13 +126,13 @@ export const refresh = async (refreshToken: string) => {
 };
 
 // Logout endpoint
-app.post("/api/logout", authenticateToken, async (req, res) => {
-  const userId = req.user.id; // Assuming the user ID is stored in the token
+// app.post("/api/logout", authenticateToken, async (req, res) => {
+//   const userId = req.user.id; // Assuming the user ID is stored in the token
 
-  // Delete all refresh tokens related to this user
-  // await deleteAllUserRefreshTokens(userId);
+//   // Delete all refresh tokens related to this user
+//   // await deleteAllUserRefreshTokens(userId);
 
-  // Optionally, you can blacklist the access token until it expires
+//   // Optionally, you can blacklist the access token until it expires
 
-  res.json({ message: "Logged out successfully" });
-});
+//   res.json({ message: "Logged out successfully" });
+// });
